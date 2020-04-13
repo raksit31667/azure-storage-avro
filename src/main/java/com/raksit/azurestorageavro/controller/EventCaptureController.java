@@ -3,12 +3,12 @@ package com.raksit.azurestorageavro.controller;
 import Microsoft.ServiceBus.Messaging.EventData;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.FileReader;
+import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,18 +23,16 @@ public class EventCaptureController {
 
   @GetMapping
   public String deserialize() throws URISyntaxException, StorageException, IOException {
-    File file = new File("file");
-    BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file));
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     cloudBlobContainer.getBlockBlobReference("<your-avro-file-here>").download(outputStream);
     DatumReader<EventData> reader = new SpecificDatumReader<>(EventData.class);
-    DataFileReader<EventData> dataFileReader = new DataFileReader<>(file, reader);
+    FileReader<EventData> dataFileReader = DataFileReader.openReader(new SeekableByteArrayInput(outputStream.toByteArray()), reader);
     EventData eventData;
     while (dataFileReader.hasNext()) {
       eventData = dataFileReader.next();
-      System.out.println(eventData);
+      System.out.println(new String(eventData.getBody().array()));
     }
     outputStream.close();
-    file.delete();
     return null;
   }
 }
