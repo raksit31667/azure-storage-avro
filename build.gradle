@@ -25,12 +25,3 @@ dependencies {
 test {
     useJUnitPlatform()
 }
-
-def generateAvro = tasks.register("generateAvro", com.commercehub.gradle.plugin.avro.GenerateAvroJavaTask) {
-    source("src/main/resources")
-    outputDir = file("src/main/java/")
-}
-
-tasks.named("compileJava").configure {
-    source(generateAvro)
-}

@@ -14,12 +14,12 @@ public class AzureStorageAccountConfiguration {
 
   @Bean
   public CloudBlobClient cloudBlobClient() throws URISyntaxException, InvalidKeyException {
-    CloudStorageAccount storageAccount = CloudStorageAccount.parse("");
+    CloudStorageAccount storageAccount = CloudStorageAccount.parse("<your-connection-string-here>");
     return storageAccount.createCloudBlobClient();
   }
 
   @Bean
   public CloudBlobContainer cloudBlobContainer() throws URISyntaxException, StorageException, InvalidKeyException {
-    return cloudBlobClient().getContainerReference("");
+    return cloudBlobClient().getContainerReference("<your-container-name-here>");
   }
 }
