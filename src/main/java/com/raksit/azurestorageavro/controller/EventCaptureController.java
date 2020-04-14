@@ -3,9 +3,11 @@ package com.raksit.azurestorageavro.controller;
 import Microsoft.ServiceBus.Messaging.EventData;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.FileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
@@ -22,17 +24,28 @@ public class EventCaptureController {
   private CloudBlobContainer cloudBlobContainer;
 
   @GetMapping
-  public String deserialize() throws URISyntaxException, StorageException, IOException {
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    cloudBlobContainer.getBlockBlobReference("<your-avro-file-here>").download(outputStream);
-    DatumReader<EventData> reader = new SpecificDatumReader<>(EventData.class);
-    FileReader<EventData> dataFileReader = DataFileReader.openReader(new SeekableByteArrayInput(outputStream.toByteArray()), reader);
-    EventData eventData;
-    while (dataFileReader.hasNext()) {
-      eventData = dataFileReader.next();
-      System.out.println(new String(eventData.getBody().array()));
+  public List<String> deserialize() throws URISyntaxException, StorageException {
+    return cloudBlobContainer.getDirectoryReference("<your-directory-here>")
+        .listBlobsSegmented().getResults().stream()
+        .map(blobItem -> (CloudBlockBlob) blobItem)
+        .map(this::deserialize)
+        .collect(Collectors.toList());
+  }
+
+  private String deserialize(CloudBlockBlob blockBlob) {
+    try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+      blockBlob.download(outputStream);
+      DatumReader<EventData> reader = new SpecificDatumReader<>(EventData.class);
+      try (FileReader<EventData> dataFileReader = DataFileReader.openReader(new SeekableByteArrayInput(outputStream.toByteArray()), reader)) {
+        EventData eventData;
+        while (dataFileReader.hasNext()) {
+          eventData = dataFileReader.next();
+          System.out.println(new String(eventData.getBody().array()));
+        }
+      }
+    } catch (Exception e) {
+      System.out.println("Deserialization error: " + e.getMessage());
     }
-    outputStream.close();
     return null;
   }
 }
